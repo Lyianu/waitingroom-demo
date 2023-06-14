@@ -15,10 +15,14 @@ var (
 	start, end int
 	key, iv    []byte
 	block      cipher.Block
+	enc, dec   cipher.BlockMode
+	volume     int
 )
 
 func main() {
+	volume = 200
 	key = make([]byte, 16)
+	iv = make([]byte, 16)
 	if _, err := rand.Read(key); err != nil {
 		panic(err)
 	}
@@ -28,6 +32,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	enc = cipher.NewCBCEncrypter(block, iv)
+	dec = cipher.NewCBCDecrypter(block, iv)
 }
 
 func getQueueTotal() int {
@@ -48,15 +54,21 @@ func getQueueEnd() int {
 	return end
 }
 
-func getPosition(hash string) int {
-	return 0
+func decryptTicket(hash string) (int, int) {
+	return 0, 0
 }
 
 // signTicket issues a ticket for a client to hold, the ticket is generated
 // by encrypting position and deviceId, which will be decrypted later to aquire
 // the ticket's position and its deviceId for verification use.
-func signTicket(position, deviceId int) int {
-	return 0
+func signTicket(position, deviceId int) string {
+	var ticket int
+	ticket |= position << 31
+	ticket |= deviceId
+
+	ciphertext := make([]byte, aes.BlockSize)
+	enc.CryptBlocks(ciphertext[aes.BlockSize:], []byte{byte(ticket)})
+	return string(ciphertext)
 }
 
 // check ticket's position by decrypting its position number and its deviceId
